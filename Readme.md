@@ -1,8 +1,8 @@
-# File System Comparator (FSF)
+# File System Comparator (fsf)
 
 ## Overview
 
-FSF is a high-performance C++20 command-line tool designed to compare files across multiple directories. It provides flexible file comparison modes, performance measurement, and detailed reporting.
+`fsf` is a high-performance C++20 command-line tool designed to compare files across multiple directories. It provides flexible file comparison modes, performance measurement, and detailed reporting.
 
 ## Features
 
