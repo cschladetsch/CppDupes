@@ -48,12 +48,10 @@ cd fsf
 ## Usage
 
 ```bash
-# Basic usage
-./fsf /path/to/directory1 /path/to/directory2
-
-# Example
-./fsf ~/Documents ~/Backup
+$ fsf dir1 dir2
 ```
+
+Shows all files that have different names/locations but same content. Warning: can take some time if you use entire drives.
 
 ### Output
 
@@ -61,8 +59,13 @@ The program outputs full paths of files with identical MD5 hashes across the spe
 
 ## Build Script Options
 
-- `./b`: Build the project
-- `./b -r`: Build and run the executable
+```bash
+$./b -c    # Clean build
+$./b -t    # Build and test
+$./b -v    # Verbose test output
+$./b -ct   # Clean, build, and test
+$./b -a    # All: Clean, build, and test with verbose output
+```
 
 ## Performance
 
