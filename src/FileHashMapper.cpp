@@ -16,7 +16,7 @@ void FileHashMapper::process_directory(const fs::path& dir) {
             // Store relative paths for consistent comparison
             std::string relative_path = fs::relative(entry.path(), dir).string();
             file_hashes[relative_path] = compute_md5(entry.path());
-            std::cout << "Processing file: " << entry.path() << " [Stored as: " << relative_path << "]\n";
+            //std::cout << "Processing file: " << entry.path() << " [Stored as: " << relative_path << "]\n";
             ++file_count;
             total_size += entry.file_size();
 		}
