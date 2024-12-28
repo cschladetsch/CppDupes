@@ -32,7 +32,7 @@ build_project() {
 
 run_tests() {
     if [ -f "$BIN_DIR/fsf_tests" ]; then
-        $BIN_DIR/fsf_tests
+        $BIN_DIR/fsf_tests -gtest_shuffle -repeat=10 --gtest_break_on_failure
         echo "Tests executed successfully."
     else
         echo "Error: Test executable not found."
