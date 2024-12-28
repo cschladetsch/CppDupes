@@ -114,6 +114,9 @@ trap 'print_error "Error occurred in script at line $LINENO. Command: $BASH_COMM
 # Start timestamp
 BUILD_START_TIME=$(date +%s)
 
+# Store original directory
+ORIGINAL_DIR=$(pwd)
+
 # Clean build directory
 print_header "Cleaning build directory..."
 if [ -d "build" ]; then
@@ -133,6 +136,7 @@ if cmake .. -DCMAKE_BUILD_TYPE=Debug 2> >(grep -i "warning" >&2); then
 else
     BUILD_STATUS="Failed"
     print_error "Configuration failed"
+    cd "$ORIGINAL_DIR"
     exit 1
 fi
 
@@ -165,6 +169,7 @@ else
     
     # Cleanup
     rm -rf "${TEMP_DIR}"
+    cd "$ORIGINAL_DIR"
     exit 1
 fi
 
@@ -176,7 +181,6 @@ BUILD_TIME=$((BUILD_END_TIME - BUILD_START_TIME))
 
 # Run tests with verbose output
 print_header "Running tests..."
-cd tests
 
 TEST_START_TIME=$(date +%s)
 
@@ -191,6 +195,7 @@ run_tests() {
 }
 
 # First list all tests
+cd tests
 print_info "Available tests:"
 TOTAL_TESTS=$(./fsf_tests --gtest_list_tests | grep -c "^[^ ]" || true)
 ./fsf_tests --gtest_list_tests
@@ -209,8 +214,13 @@ else
     PASSED_TESTS=$((TOTAL_TESTS - FAILED_TESTS))
 fi
 
+cd "$ORIGINAL_DIR/build"
+
 TEST_END_TIME=$(date +%s)
 TEST_TIME=$((TEST_END_TIME - TEST_START_TIME))
+
+# Return to original directory
+cd "$ORIGINAL_DIR"
 
 # Print final summary
 print_summary
