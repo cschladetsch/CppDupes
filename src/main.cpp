@@ -1,13 +1,23 @@
 #include "DirectoryComparer.hpp"
 #include <iostream>
 #include <boost/program_options.hpp>
+#include <ctime>
 
 namespace po = boost::program_options;
 
+const std::string VERSION = "1.0.0";
+
 int main(int argc, char* argv[]) {
+    // Get the current time
+    std::time_t now = std::time(nullptr);
+    char time_str[100];
+    std::strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
+	std::cout << "Built on: " << time_str << std::endl;
+
     po::options_description desc("Allowed options");
     desc.add_options()
         ("help,h", "Show help message")
+        ("version,v", "Show version information")
         ("mode,m", po::value<std::string>()->default_value("all"), "Comparison mode: all, different, same, unique")
         ("directories", po::value<std::vector<std::string>>()->multitoken(), "Directories to compare");
 
@@ -23,6 +33,12 @@ int main(int argc, char* argv[]) {
 
     if (vm.count("help")) {
         std::cout << desc << std::endl;
+        return 0;
+    }
+
+    if (vm.count("version")) {
+        std::cout << "FSF Application Version: " << VERSION << std::endl;
+        std::cout << "Built on: " << time_str << std::endl;
         return 0;
     }
 
