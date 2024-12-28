@@ -1,0 +1,7 @@
+#!/bin/bash
+
+rm -f code.zip
+
+zip code.zip CMakeLists.txt tests/* include/* src/* Readme.md b
+
+

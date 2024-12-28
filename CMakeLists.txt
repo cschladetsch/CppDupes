@@ -25,5 +25,5 @@ add_subdirectory(src)
 add_subdirectory(tests)
 
 # Link Boost libraries globally
-link_directories(${Boost_LIBRARY_DIRS})
+set(BOOST_LIBS Boost::program_options)
 
