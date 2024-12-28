@@ -19,9 +19,10 @@ void FileHashMapper::process_directory(const fs::path& dir) {
             std::cout << "Processing file: " << entry.path() << " [Stored as: " << relative_path << "]\n";
             ++file_count;
             total_size += entry.file_size();
-        } else {
-            std::cout << "Skipping non-regular file: " << entry.path() << "\n";
-        }
+		}
+        //} else {
+            //std::cout << "Skipping non-regular file: " << entry.path() << "\n";
+        //}
     }
 }
 
