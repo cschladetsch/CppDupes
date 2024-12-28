@@ -5,8 +5,6 @@
 #include <unordered_map>
 #include <vector>
 
-namespace fs = std::filesystem;
-
 enum class ComparisonMode {
     All,
     OnlyDifferent,
@@ -16,13 +14,24 @@ enum class ComparisonMode {
 
 class DirectoryComparer {
 public:
-    static void compare_directories(const std::vector<fs::path>& directories, ComparisonMode mode, const std::vector<std::string>& exclude_folders);
+    // Remove the namespace declaration inside the class
+    static void compare_directories(
+        const std::vector<std::filesystem::path>& directories, 
+        ComparisonMode mode, 
+        const std::vector<std::string>& exclude_folders
+    );
 
 private:
-    static void process_directory(const fs::path& dir, std::unordered_map<std::string, std::string>& file_hashes, const std::vector<std::string>& exclude_folders);
-    static void print_comparison(
-		const std::unordered_map<std::string, std::unordered_map<std::string, std::string>>& all_hashes,
-		ComparisonMode mode);
-static std::string format_size(std::uintmax_t size);
-};
+    static void process_directory(
+        const std::filesystem::path& dir, 
+        std::unordered_map<std::string, std::string>& file_hashes, 
+        const std::vector<std::string>& exclude_folders
+    );
 
+    static void print_comparison(
+        const std::unordered_map<std::string, std::unordered_map<std::string, std::string>>& all_hashes,
+        ComparisonMode mode
+    );
+
+    static std::string format_size(std::uintmax_t size);
+};

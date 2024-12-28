@@ -1,76 +1,64 @@
 #include "DirectoryComparer.hpp"
 #include <iostream>
-#include <boost/program_options.hpp>
-#include <ctime>
-
-namespace po = boost::program_options;
-
-const std::string VERSION = "1.0.0";
+#include <filesystem>
+#include <vector>
+#include <string>
 
 int main(int argc, char* argv[]) {
-    // Get the current time
-    std::time_t now = std::time(nullptr);
-    char time_str[100];
-    std::strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
+    // Validate command-line arguments
+    if (argc < 3) {
+        std::cerr << "Usage: " << argv[0] << " <mode> <directory1> [<directory2> ...]\n";
+        std::cerr << "Modes:\n";
+        std::cerr << "  all\n";
+        std::cerr << "  different\n";
+        std::cerr << "  same\n";
+        std::cerr << "  unique\n";
+        return 1;
+    }
 
-    po::options_description desc("Allowed options");
-    desc.add_options()
-        ("help,h", "Show help message")
-        ("version,v", "Show version information")
-        ("mode,m", po::value<std::string>()->default_value("same"), "Comparison mode: all, different, same, unique")
-        ("directories", po::value<std::vector<std::string>>()->multitoken(), "Directories to compare")
-        ("exclude,e", po::value<std::vector<std::string>>()->multitoken(), "Folder names to exclude from comparison");
+    // Parse mode
+    ComparisonMode mode;
+    std::string mode_arg = argv[1];
+    if (mode_arg == "all") {
+        mode = ComparisonMode::All;
+    } else if (mode_arg == "different") {
+        mode = ComparisonMode::OnlyDifferent;
+    } else if (mode_arg == "same") {
+        mode = ComparisonMode::OnlySame;
+    } else if (mode_arg == "unique") {
+        mode = ComparisonMode::OnlyUnique;
+    } else {
+        std::cerr << "Invalid mode. Choose: all, different, same, or unique.\n";
+        return 1;
+    }
 
-    po::variables_map vm;
+    // Collect directories
+    std::vector<std::filesystem::path> directories;
+    
+    // Collect directory paths from command line
+    for (int i = 2; i < argc; ++i) {
+        std::filesystem::path dir(argv[i]);
+        
+        // Validate directory
+        if (!std::filesystem::exists(dir) || !std::filesystem::is_directory(dir)) {
+            std::cerr << "Error: " << dir << " is not a valid directory.\n";
+            return 1;
+        }
+        
+        directories.push_back(dir);
+    }
+
+    // Exclude folders (optional)
+    std::vector<std::string> exclude_folders = {".git"};
+
     try {
-        po::store(po::parse_command_line(argc, argv, desc), vm);
-        po::notify(vm);
-    } catch (const po::error& ex) {
-        std::cerr << "Error parsing command line: " << ex.what() << "\n";
-        std::cout << desc << std::endl;
+        // Perform directory comparison
+        DirectoryComparer::compare_directories(directories, mode, exclude_folders);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << '\n';
         return 1;
     }
-
-    if (vm.count("help")) {
-        std::cout << desc << std::endl;
-        return 0;
-    }
-
-    if (vm.count("version")) {
-        std::cout << "FSF Application Version: " << VERSION << std::endl;
-        std::cout << "Built on: " << time_str << std::endl;
-        return 0;
-    }
-
-    std::string mode_str = vm["mode"].as<std::string>();
-    ComparisonMode mode = ComparisonMode::All;
-    if (mode_str == "different") mode = ComparisonMode::OnlyDifferent;
-    else if (mode_str == "same") mode = ComparisonMode::OnlySame;
-    else if (mode_str == "unique") mode = ComparisonMode::OnlyUnique;
-
-    if (!vm.count("directories")) {
-        std::cerr << "Error: At least two directories must be provided for comparison." << std::endl;
-        return 1;
-    }
-
-    std::vector<std::string> dir_strings = vm["directories"].as<std::vector<std::string>>();
-    if (dir_strings.size() < 2) {
-        std::cerr << "Error: At least two directories must be provided for comparison." << std::endl;
-        return 1;
-    }
-
-    std::vector<std::string> exclude_folders;
-    if (vm.count("exclude")) {
-        exclude_folders = vm["exclude"].as<std::vector<std::string>>();
-    }
-
-    std::vector<fs::path> directories;
-    for (const auto& dir : dir_strings) {
-        directories.emplace_back(dir);
-    }
-
-    DirectoryComparer::compare_directories(directories, mode, exclude_folders);
 
     return 0;
 }
-
