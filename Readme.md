@@ -63,10 +63,7 @@ Use the provided `b` script to manage builds. The following options are availabl
   ./b -bt
   ```
 
-The compiled binary (`fsf`) will be located in `~/bin`. Ensure the `~/bin` folder exists:
-```bash
-mkdir -p ~/bin
-```
+The compiled binary (`fsf`) will be located in `~/bin`. Esnure this is added to your PATH.
 
 ### Main Application Help Output
 Run the application with `--help` to see available options:
