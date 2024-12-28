@@ -17,8 +17,11 @@ include_directories(${GTEST_INCLUDE_DIRS})
 # Add OpenSSL
 find_package(OpenSSL REQUIRED)
 
+# Include directories
+include_directories(${CMAKE_SOURCE_DIR}/include)
+
 # Add main executable
-add_executable(fsf_main src/main.cpp)
+add_executable(fsf_main src/main.cpp src/FileHashMapper.cpp)
 target_link_libraries(fsf_main OpenSSL::Crypto)
 
 # Set fsf_main output directory to ~/bin
@@ -26,8 +29,8 @@ set_target_properties(fsf_main PROPERTIES RUNTIME_OUTPUT_DIRECTORY $ENV{HOME}/bi
 
 # Add test sources
 file(GLOB TEST_SOURCES tests/*.cpp)
-add_executable(fsf_tests ${TEST_SOURCES})
-target_link_libraries(fsf_tests ${GTEST_LIBRARIES} pthread OpenSSL::Crypto)
+add_executable(fsf_tests ${TEST_SOURCES} src/FileHashMapper.cpp)
+target_link_libraries(fsf_tests GTest::GTest GTest::Main pthread OpenSSL::Crypto)
 
 # Set output directories for tests
 set_target_properties(fsf_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
