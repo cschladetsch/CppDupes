@@ -8,6 +8,7 @@ FSF is a project designed to handle file comparisons using MD5 hashes, while pro
 - Supports comparing any number of directories specified on the command line.
 - Options to display only different files, same files, or files unique to one directory.
 - Modular architecture with `src` and `tests` directories for clear separation of concerns.
+- Boost program-options for arguments.
 - Google Test integration for robust testing.
 - C++20 support for modern features and better performance.
 
