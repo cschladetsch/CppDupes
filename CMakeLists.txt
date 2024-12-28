@@ -1,29 +1,27 @@
 cmake_minimum_required(VERSION 3.10)
+project(CppDupes)
 
-# Project setup
-project(fsf)
-
-# Enable C++20 standard
-set(CMAKE_CXX_STANDARD 20)
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Enable testing
-enable_testing()
-
-# Find dependencies
-find_package(Boost REQUIRED COMPONENTS program_options)
+# Find OpenSSL
 find_package(OpenSSL REQUIRED)
-find_package(GTest REQUIRED)
+set(OPENSSL_CRYPTO_LIB OpenSSL::Crypto)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# Include directories
-include_directories(${Boost_INCLUDE_DIRS})
-include_directories(${CMAKE_SOURCE_DIR}/include)
-include_directories(${GTEST_INCLUDE_DIRS})
 
-# Add subdirectories
+# Add include directories
+include_directories(include)
+
+# Subdirectories for source and tests
 add_subdirectory(src)
 add_subdirectory(tests)
 
-# Link Boost libraries globally
-set(BOOST_LIBS Boost::program_options)
-
+# Check and fetch rang.hpp if not present
+set(RANG_PATH "${CMAKE_SOURCE_DIR}/include/rang.hpp")
+if (NOT EXISTS ${RANG_PATH})
+    message(STATUS "Downloading rang.hpp...")
+    file(DOWNLOAD https://raw.githubusercontent.com/agauniyal/rang/master/include/rang.hpp
+         ${RANG_PATH})
+endif()
