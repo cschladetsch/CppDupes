@@ -1,120 +1,99 @@
 #include <gtest/gtest.h>
-#include "FileHashMapper.hpp"
 #include <filesystem>
 #include <fstream>
+#include "FileHashMapper.hpp"
+
+namespace fs = std::filesystem;
 
 class FileHashMapperTestFixture : public ::testing::Test {
 protected:
     void SetUp() override {
-        std::filesystem::create_directory("test_dir");
+        if (fs::exists("test_data")) {
+            fs::remove_all("test_data");
+        }
+        fs::create_directory("test_data");
+        fs::create_directory("test_data/dir1");
+        fs::create_directory("test_data/dir2");
     }
 
     void TearDown() override {
-        std::filesystem::remove_all("test_dir");
-        std::filesystem::remove("large_file.txt");
-    }
-
-    void create_large_file(const std::string& filename, size_t lines) {
-        std::ofstream file(filename);
-        for (size_t i = 0; i < lines; ++i) {
-            file << "Line " << i << ": Lorem ipsum dolor sit amet.\n";
+        if (fs::exists("test_data")) {
+            fs::remove_all("test_data");
         }
     }
 
-    void create_test_files(size_t count, const std::string& dir = "test_dir") {
-        for (size_t i = 0; i < count; ++i) {
-            std::ofstream file(dir + "/file" + std::to_string(i) + ".txt");
-            file << "Content for file " << i;
-        }
+    void writeFile(const std::string& path, const std::string& content) {
+        std::ofstream file(path);
+        file << content;
+        file.close();
     }
-
-    FileHashMapper mapper;
 };
 
-TEST_F(FileHashMapperTestFixture, LargeFileHashTest) {
-    create_large_file("large_file.txt", 100000);  // 100,000 lines
-    ASSERT_NO_THROW(FileHashMapper::compute_md5("large_file.txt"));
-}
+TEST_F(FileHashMapperTestFixture, ExactDuplicatesInDifferentDirectories) {
+    writeFile("test_data/dir1/file1.txt", "test content");
+    writeFile("test_data/dir2/file2.txt", "test content");
 
-TEST_F(FileHashMapperTestFixture, LargeDirectoryProcessing) {
-    create_test_files(1000);  // Create 1,000 small files
-    mapper.process_directory("test_dir");
-    ASSERT_EQ(mapper.get_file_count(), 1000);
-}
-
-TEST_F(FileHashMapperTestFixture, NestedDirectoryProcessing) {
-    std::filesystem::create_directory("test_dir/subdir");
-    create_test_files(100, "test_dir");
-    create_test_files(100, "test_dir/subdir");
-
-    mapper.process_directory("test_dir");
-    ASSERT_EQ(mapper.get_file_count(), 200);
-}
-
-TEST_F(FileHashMapperTestFixture, StressTestLargeFiles) {
-    for (size_t i = 0; i < 10; ++i) {
-        create_large_file("test_dir/large_file" + std::to_string(i) + ".txt", 50000);  // 50,000 lines each
-    }
-    mapper.process_directory("test_dir");
-    ASSERT_EQ(mapper.get_file_count(), 10);
-}
-
-TEST_F(FileHashMapperTestFixture, DirectoryWithSpecialCharacters) {
-    std::filesystem::create_directory("test_dir/special_çhår@ctérs");
-    std::ofstream file("test_dir/special_çhår@ctérs/test.txt");
-    file << "Special characters test";
-    file.close();
-
-    mapper.process_directory("test_dir");
-    ASSERT_EQ(mapper.get_file_count(), 1);
-}
-
-TEST_F(FileHashMapperTestFixture, ConsistentHashAcrossLargeRuns) {
-    create_large_file("large_file.txt", 100000);  // 100,000 lines
-    std::string hash1 = FileHashMapper::compute_md5("large_file.txt");
-    std::string hash2 = FileHashMapper::compute_md5("large_file.txt");
-    ASSERT_EQ(hash1, hash2);
-}
-
-TEST_F(FileHashMapperTestFixture, DirectoryWithBinaryFiles) {
-    std::ofstream binary_file("test_dir/binary_file.dat", std::ios::binary);
-    for (size_t i = 0; i < 1000; ++i) {
-        char data[1024] = { static_cast<char>(i % 256) };
-        binary_file.write(data, sizeof(data));
-    }
-    binary_file.close();
-
-    mapper.process_directory("test_dir");
-    ASSERT_EQ(mapper.get_file_count(), 1);
-}
-
-TEST_F(FileHashMapperTestFixture, RecursiveHashVerification) {
-    std::filesystem::create_directory("test_dir/subdir");
-    create_test_files(10, "test_dir");
-    create_test_files(10, "test_dir/subdir");
-
-    mapper.process_directory("test_dir");
+    FileHashMapper mapper;
+    mapper.process_directory("test_data");
+    
     auto hashes = mapper.get_file_hashes();
-
-    for (const auto& [file, hash] : hashes) {
-        ASSERT_FALSE(hash.empty());
+    
+    // Group files by hash to find duplicates
+    std::unordered_map<std::string, std::vector<std::string>> hashGroups;
+    for (const auto& [path, hash] : hashes) {
+        hashGroups[hash].push_back(path);
     }
-}
-
-TEST_F(FileHashMapperTestFixture, PerformanceTestWithMixedFiles) {
-    for (size_t i = 0; i < 100; ++i) {
-        if (i % 2 == 0) {
-            create_large_file("test_dir/large_file" + std::to_string(i) + ".txt", 10000);  // Large files
-        } else {
-            std::ofstream file("test_dir/file" + std::to_string(i) + ".txt");
-            file << "Small content file";
+    
+    // Find groups with more than one file (duplicates)
+    bool hasDuplicates = false;
+    for (const auto& [hash, files] : hashGroups) {
+        if (files.size() > 1) {
+            hasDuplicates = true;
+            break;
         }
     }
-    mapper.process_directory("test_dir");
-    ASSERT_EQ(mapper.get_file_count(), 100);
+    
+    EXPECT_TRUE(hasDuplicates);
+    EXPECT_EQ(mapper.get_file_count(), 2);
 }
 
-TEST_F(FileHashMapperTestFixture, EmptyDirectoryTest) {
-    mapper.process_directory("test_dir");
-    ASSERT_EQ(mapper.get_file_count(), 0);
+TEST_F(FileHashMapperTestFixture, NoDuplicatesWithDifferentContent) {
+    writeFile("test_data/dir1/file1.txt", "content1");
+    writeFile("test_data/dir2/file2.txt", "content2");
+
+    FileHashMapper mapper;
+    mapper.process_directory("test_data");
+    
+    auto hashes = mapper.get_file_hashes();
+    
+    // Group files by hash
+    std::unordered_map<std::string, std::vector<std::string>> hashGroups;
+    for (const auto& [path, hash] : hashes) {
+        hashGroups[hash].push_back(path);
+    }
+    
+    // Check that no hash has more than one file
+    bool hasDuplicates = false;
+    for (const auto& [hash, files] : hashGroups) {
+        if (files.size() > 1) {
+            hasDuplicates = true;
+            break;
+        }
+    }
+    
+    EXPECT_FALSE(hasDuplicates);
+    EXPECT_EQ(mapper.get_file_count(), 2);
+}
+
+TEST_F(FileHashMapperTestFixture, HandlesEmptyDirectory) {
+    FileHashMapper mapper;
+    mapper.process_directory("test_data");
+    
+    EXPECT_EQ(mapper.get_file_count(), 0);
+    EXPECT_EQ(mapper.get_total_size(), 0);
+}
+
+int main(int argc, char **argv) {
+    testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }

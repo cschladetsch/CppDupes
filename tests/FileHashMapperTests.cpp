@@ -1,122 +1,117 @@
 #include <gtest/gtest.h>
 #include <filesystem>
 #include <fstream>
-
+#include <thread>
 #include "FileHashMapper.hpp"
 
-TEST(FileHashMapperTests, ComputeMd5ValidFile) {
-    std::ofstream file("test_valid.txt");
-    file << "test content";
-    file.close();
+namespace fs = std::filesystem;
 
-    std::string hash = FileHashMapper::compute_md5("test_valid.txt");
-    std::filesystem::remove("test_valid.txt");
-
-    ASSERT_FALSE(hash.empty());
-}
-
-TEST(FileHashMapperTests, ComputeMd5EmptyFile) {
-    std::ofstream file("test_empty.txt");
-    file.close();
-
-    std::string hash = FileHashMapper::compute_md5("test_empty.txt");
-    std::filesystem::remove("test_empty.txt");
-
-    ASSERT_FALSE(hash.empty());
-}
-
-TEST(FileHashMapperTests, ComputeMd5NonexistentFile) {
-    ASSERT_THROW(FileHashMapper::compute_md5("nonexistent.txt"), std::exception);
-}
-
-TEST(FileHashMapperTests, ProcessDirectorySingleFile) {
-    std::filesystem::create_directory("test_dir");
-    std::ofstream file("test_dir/file1.txt");
-    file << "content";
-    file.close();
-
-    FileHashMapper mapper;
-    mapper.process_directory("test_dir");
-
-    ASSERT_EQ(mapper.get_file_count(), 1);
-    std::filesystem::remove_all("test_dir");
-}
-
-TEST(FileHashMapperTests, ProcessDirectoryMultipleFiles) {
-    std::filesystem::create_directory("test_dir");
-    std::ofstream file1("test_dir/file1.txt");
-    file1 << "content1";
-    file1.close();
-
-    std::ofstream file2("test_dir/file2.txt");
-    file2 << "content2";
-    file2.close();
-
-    FileHashMapper mapper;
-    mapper.process_directory("test_dir");
-
-    ASSERT_EQ(mapper.get_file_count(), 2);
-    std::filesystem::remove_all("test_dir");
-}
-
-TEST(FileHashMapperTests, ProcessDirectoryNoFiles) {
-    std::filesystem::create_directory("test_dir");
-
-    FileHashMapper mapper;
-    mapper.process_directory("test_dir");
-
-    ASSERT_EQ(mapper.get_file_count(), 0);
-    std::filesystem::remove_all("test_dir");
-}
-
-TEST(FileHashMapperTests, ComputeMd5ConsistentHash) {
-    std::ofstream file("test_hash.txt");
-    file << "consistent content";
-    file.close();
-
-    std::string hash1 = FileHashMapper::compute_md5("test_hash.txt");
-    std::string hash2 = FileHashMapper::compute_md5("test_hash.txt");
-
-    ASSERT_EQ(hash1, hash2);
-    std::filesystem::remove("test_hash.txt");
-}
-
-TEST(FileHashMapperTests, ProcessDirectoryIgnoresSubdirectories) {
-    std::filesystem::create_directory("test_dir");
-    std::filesystem::create_directory("test_dir/subdir");
-    std::ofstream file("test_dir/file1.txt");
-    file << "content";
-    file.close();
-
-    FileHashMapper mapper;
-    mapper.process_directory("test_dir");
-
-    ASSERT_EQ(mapper.get_file_count(), 1);
-    std::filesystem::remove_all("test_dir");
-}
-
-TEST(FileHashMapperTests, GetFileHashes) {
-    std::filesystem::create_directory("test_dir");
-    std::ofstream file("test_dir/file1.txt");
-    file << "content";
-    file.close();
-
-    FileHashMapper mapper;
-    mapper.process_directory("test_dir");
-
-    auto hashes = mapper.get_file_hashes();
-    ASSERT_EQ(hashes.size(), 1);
-
-    std::filesystem::remove_all("test_dir");
-}
-
-TEST(FileHashMapperTests, ComputeMd5Performance) {
-    std::ofstream file("large_file.txt");
-    for (int i = 0; i < 100000; ++i) {
-        file << "large_content\n";
+class FileHashMapperTests : public ::testing::Test {
+protected:
+    void SetUp() override {
+        // Create test directory if it doesn't exist
+        if (fs::exists("test_dir")) {
+            fs::remove_all("test_dir");
+        }
+        fs::create_directory("test_dir");
     }
-    file.close();
 
-    ASSERT_NO_THROW(FileHashMapper::compute_md5("large_file.txt"));
-    std::filesystem::remove("large_file.txt");
+    void TearDown() override {
+        // Cleanup
+        if (fs::exists("test_dir")) {
+            fs::remove_all("test_dir");
+        }
+    }
+
+    void writeTestFile(const std::string& path, const std::string& content) {
+        std::ofstream file(path);
+        file << content;
+        file.close();
+    }
+};
+
+TEST_F(FileHashMapperTests, EmptyFileHasConsistentHash) {
+    writeTestFile("test_dir/empty.txt", "");
+    
+    std::string hash1 = FileHashMapper::compute_md5("test_dir/empty.txt");
+    std::string hash2 = FileHashMapper::compute_md5("test_dir/empty.txt");
+    
+    EXPECT_EQ(hash1, hash2);
+}
+
+TEST_F(FileHashMapperTests, LargeFileHashingWorks) {
+    std::string largeContent(1024 * 1024, 'A'); // 1MB file
+    writeTestFile("test_dir/large.txt", largeContent);
+    
+    EXPECT_NO_THROW(FileHashMapper::compute_md5("test_dir/large.txt"));
+}
+
+TEST_F(FileHashMapperTests, BinaryFileHashingWorks) {
+    // Create binary file
+    std::ofstream file("test_dir/binary.dat", std::ios::binary);
+    unsigned char binaryData[] = {0x00, 0xFF, 0x12, 0x34};
+    file.write(reinterpret_cast<char*>(binaryData), sizeof(binaryData));
+    file.close();
+    
+    EXPECT_NO_THROW(FileHashMapper::compute_md5("test_dir/binary.dat"));
+}
+
+TEST_F(FileHashMapperTests, HashChangesWithContentChange) {
+    writeTestFile("test_dir/test.txt", "initial content");
+    std::string hash1 = FileHashMapper::compute_md5("test_dir/test.txt");
+    
+    writeTestFile("test_dir/test.txt", "modified content");
+    std::string hash2 = FileHashMapper::compute_md5("test_dir/test.txt");
+    
+    EXPECT_NE(hash1, hash2);
+}
+
+TEST_F(FileHashMapperTests, NonExistentFileThrowsException) {
+    EXPECT_THROW(FileHashMapper::compute_md5("non_existent.txt"), std::runtime_error);
+}
+
+TEST_F(FileHashMapperTests, HandlesSpecialCharactersInFilename) {
+    writeTestFile("test_dir/special!@#$%^&.txt", "content");
+    EXPECT_NO_THROW(FileHashMapper::compute_md5("test_dir/special!@#$%^&.txt"));
+}
+
+TEST_F(FileHashMapperTests, ProcessDirectoryWorksCorrectly) {
+    writeTestFile("test_dir/file1.txt", "content1");
+    writeTestFile("test_dir/file2.txt", "content2");
+    fs::create_directory("test_dir/subdir");
+    writeTestFile("test_dir/subdir/file3.txt", "content3");
+    
+    FileHashMapper mapper;
+    mapper.process_directory("test_dir");
+    
+    EXPECT_EQ(mapper.get_file_count(), 3);
+    auto hashes = mapper.get_file_hashes();
+    EXPECT_EQ(hashes.size(), 3);
+}
+
+TEST_F(FileHashMapperTests, HandlesZeroByteFile) {
+    std::ofstream file("test_dir/zero.txt");
+    file.close();
+    
+    EXPECT_NO_THROW(FileHashMapper::compute_md5("test_dir/zero.txt"));
+}
+
+TEST_F(FileHashMapperTests, ConsistentHashForSameContent) {
+    writeTestFile("test_dir/file1.txt", "test content");
+    writeTestFile("test_dir/file2.txt", "test content");
+    
+    EXPECT_EQ(FileHashMapper::compute_md5("test_dir/file1.txt"),
+              FileHashMapper::compute_md5("test_dir/file2.txt"));
+}
+
+TEST_F(FileHashMapperTests, TotalSizeIsCorrect) {
+    std::string content1(1000, 'A');
+    std::string content2(2000, 'B');
+    writeTestFile("test_dir/file1.txt", content1);
+    writeTestFile("test_dir/file2.txt", content2);
+    
+    FileHashMapper mapper;
+    mapper.process_directory("test_dir");
+    
+    EXPECT_EQ(mapper.get_total_size(), 3000);
 }
