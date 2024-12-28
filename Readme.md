@@ -1,74 +1,113 @@
 # FSF Project
 
 ## Overview
-FSF is a project designed to efficiently handle file comparisons and related functionalities. It supports robust testing using Google Test (GTest) and includes a streamlined build process with CMake.
+FSF is a project designed to handle file comparisons using MD5 hashes, while providing modular and testable architecture. The project is written in modern C++20, leveraging OpenSSL for cryptographic operations and Google Test for unit testing.
 
 ## Features
-- File comparison tools with human-readable size outputs for paired files.
-- Unit tests powered by Google Test.
-- Modular design for extensibility.
-- Compatibility with C++20.
+- Compute and compare MD5 hashes for files in directories.
+- Modular architecture with `src` and `tests` directories for clear separation of concerns.
+- Google Test integration for robust testing.
+- C++20 support for modern features and better performance.
+
+## Directory Structure
+```
+fsf/
+├── CMakeLists.txt          # Root CMake configuration
+├── src/                   # Source files for the main application
+│   ├── CMakeLists.txt      # CMake configuration for src
+│   ├── main.cpp            # Entry point for the application
+│   └── FileHashMapper.cpp  # Core logic for hashing and file processing
+├── tests/                 # Unit tests for the application
+│   ├── CMakeLists.txt      # CMake configuration for tests
+│   └── tests.cpp           # Test cases using Google Test
+└── include/               # Shared headers
+    └── FileHashMapper.hpp  # Declaration of FileHashMapper
+```
 
 ## Requirements
-- CMake 3.10 or higher
-- GCC/Clang (or equivalent compiler supporting C++20)
-- Google Test library
-- OpenSSL development library
+- **CMake**: Version 3.10 or higher
+- **C++ Compiler**: GCC, Clang, or MSVC supporting C++20
+- **Dependencies**:
+  - Google Test (GTest)
+  - OpenSSL
 
 ## Setup and Build
+### Cloning the Repository
+```bash
+git clone <repository-url>
+cd fsf
+```
 
 ### Building the Project
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd fsf
-   ```
-2. Create and navigate to the build directory:
-   ```bash
-   mkdir build && cd build
-   ```
-3. Run CMake and build:
-   ```bash
-   cmake ..
-   make
-   ```
+Use the provided `b` script for managing builds. The options for `b` can be combined in any order:
 
-The compiled binaries will be available in the `build/bin` directory.
+- **Clean the build directory**:
+  ```bash
+  ./b -c
+  ```
+- **Build the project**:
+  ```bash
+  ./b -b
+  ```
+- **Clean and build**:
+  ```bash
+  ./b -cb
+  ```
+- **Run tests without rebuilding**:
+  ```bash
+  ./b -t
+  ```
 
-### Using the Build Script
-The project includes a build script `b` with flexible options. You can specify options in any order and combine them as needed:
-- `-c`: Clean the build directory.
-- `-b`: Build the project.
-- `-t`: Run tests.
+### Examples of Combined Options
+You can combine the options of `b` in any order to perform multiple tasks in one command:
 
-Examples:
-- `./b -c`: Clean only.
-- `./b -b`: Build only.
-- `./b -cb`: Clean and build.
-- `./b -t`: Run tests.
-- `./b -bct`: Build, clean, and test (order does not matter).
+- **Clean, build, and run tests**:
+  ```bash
+  ./b -cbt
+  ```
+- **Build and run tests**:
+  ```bash
+  ./b -bt
+  ```
+- **Clean only**:
+  ```bash
+  ./b -c
+  ```
+- **Run tests only**:
+  ```bash
+  ./b -t
+  ```
+
+### Running the Main Application
+The compiled binary for the main application (`fsf_main`) will be located in `~/bin`. To execute:
+```bash
+~/bin/fsf_main <directory1> <directory2>
+```
+This compares the files in `directory1` and `directory2` based on their MD5 hashes.
 
 ### Running Tests
-To run the tests:
+To build and run tests using the `b` script:
+```bash
+./b -cbt
+```
+This cleans, builds, and runs the test suite, providing detailed output in case of failures.
+
+To run tests without rebuilding:
 ```bash
 ./b -t
 ```
-Alternatively, you can execute the test binary directly:
-```bash
-./build/bin/fsf_tests
-```
-
-## Usage
-The `fsf_main` executable provides the core functionality. Pass the required arguments to compare files or execute other tasks as needed.
+This runs the test suite only.
 
 ## Contributing
 1. Fork the repository and create a new branch for your feature or bugfix.
 2. Submit a pull request with a detailed explanation of the changes.
 
 ## License
-This project is licensed under the MIT License. See the LICENSE file for details.
+This project is licensed under the MIT License. See the LICENSE file for more details.
 
 ## Acknowledgments
-- Google Test for the testing framework.
-- CMake for build automation.
-- OpenSSL for cryptographic functionality.
+- **Google Test**: For providing the testing framework.
+- **OpenSSL**: For cryptographic operations.
+- **CMake**: For build system management.
+
+
