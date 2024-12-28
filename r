@@ -1,36 +1,27 @@
 #!/bin/bash
 
-# Script 'r': Build and run the project, then execute all tests
-
-# Exit immediately if a command exits with a non-zero status
 set -e
 
-# Define build directory
-BUILD_DIR="build"
+# Build the project
+cmake -S . -B build
+cmake --build build
 
-# Create or clean the build directory
-if [ ! -d "$BUILD_DIR" ]; then
-    mkdir "$BUILD_DIR"
+# Copy the main executable to ~/bin
+if [ -f "build/bin/fsf" ]; then
+    cp build/bin/fsf ~/bin/fsf_main
+    echo "fsf_main copied to ~/bin"
 else
-    rm -rf "$BUILD_DIR"/*
+    echo "Error: fsf binary not found in build/bin/"
+    exit 1
 fi
 
-# Navigate to the build directory
-cd "$BUILD_DIR"
-
-# Run CMake configuration and build
-cmake ..
-make -j$(nproc)
-
-# Navigate back to the root directory
-cd ..
-
-# Run all tests (assuming the main test binary is 'fsf_tests')
-if [ -f "build/bin/fsf_tests" ]; then
-    echo "Running all tests using fsf_tests binary:"
-    ./build/bin/fsf_tests
+# Find and run the test binary
+fsf_tests_binary=$(find build -type f -name "fsf_tests" | head -n 1)
+if [ -n "$fsf_tests_binary" ]; then
+    echo "Running test binary: $fsf_tests_binary"
+    "$fsf_tests_binary"
 else
-    echo "Error: fsf_tests binary not found in build/bin/"
+    echo "Error: fsf_tests binary not found."
     exit 1
 fi
 

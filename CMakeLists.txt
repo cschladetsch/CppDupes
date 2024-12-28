@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(CppDupes)
+project(fdiff)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -8,8 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Find OpenSSL
 find_package(OpenSSL REQUIRED)
 set(OPENSSL_CRYPTO_LIB OpenSSL::Crypto)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ~/bin)
 
 # Add include directories
 include_directories(include)
