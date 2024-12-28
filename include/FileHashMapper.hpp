@@ -6,16 +6,14 @@
 #include <unordered_map>
 #include <atomic>
 
-namespace fs = std::filesystem;
-
 class FileHashMapper {
 public:
     FileHashMapper();
-    void process_directory(const fs::path& dir);
+    void process_directory(const std::filesystem::path& dir);
     size_t get_file_count() const;
     uintmax_t get_total_size() const;
     std::unordered_map<std::string, std::string> get_file_hashes() const;
-    static std::string compute_md5(const fs::path& file_path);
+    static std::string compute_md5(const std::filesystem::path& file_path);
 
 private:
     std::unordered_map<std::string, std::string> file_hashes;

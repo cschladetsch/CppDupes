@@ -8,7 +8,7 @@
 #include <iostream>
 #include <algorithm>
 
-#include "FileHashMapper.hpp"
+namespace fs = std::filesystem;
 
 FileHashMapper::FileHashMapper() : file_count(0), total_size(0) {}
 
