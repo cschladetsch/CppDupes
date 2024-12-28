@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
     desc.add_options()
         ("help,h", "Show help message")
         ("version,v", "Show version information")
-        ("mode,m", po::value<std::string>()->default_value("all"), "Comparison mode: all, different, same, unique")
+        ("mode,m", po::value<std::string>()->default_value("same"), "Comparison mode: all, different, same, unique")
         ("directories", po::value<std::vector<std::string>>()->multitoken(), "Directories to compare")
         ("exclude,e", po::value<std::vector<std::string>>()->multitoken(), "Folder names to exclude from comparison");
 
