@@ -1,5 +1,7 @@
+#include <openssl/evp.h>
+#include <openssl/err.h>
+
 #include "FileHashMapper.hpp"
-#include <openssl/md5.h>
 #include <fstream>
 #include <sstream>
 #include <iomanip>
@@ -37,29 +39,45 @@ uintmax_t FileHashMapper::get_total_size() const {
 std::unordered_map<std::string, std::string> FileHashMapper::get_file_hashes() const {
     return file_hashes;
 }
-
 std::string FileHashMapper::compute_md5(const fs::path& file_path) {
+    unsigned char md[EVP_MAX_MD_SIZE];
+    unsigned int md_len = 0;
+
     std::ifstream file(file_path, std::ios::binary);
     if (!file) {
         throw std::runtime_error("Unable to open file: " + file_path.string());
     }
 
-    MD5_CTX md5_ctx;
-    MD5_Init(&md5_ctx);
-
-    char buffer[8192];
-    while (file.read(buffer, sizeof(buffer))) {
-        MD5_Update(&md5_ctx, buffer, file.gcount());
+    EVP_MD_CTX* md_ctx = EVP_MD_CTX_new();
+    if (!md_ctx) {
+        throw std::runtime_error("Failed to create EVP_MD_CTX");
     }
-    MD5_Update(&md5_ctx, buffer, file.gcount());
 
-    unsigned char hash[MD5_DIGEST_LENGTH];
-    MD5_Final(hash, &md5_ctx);
+    try {
+        if (!EVP_DigestInit_ex(md_ctx, EVP_md5(), nullptr)) {
+            throw std::runtime_error("EVP_DigestInit_ex failed");
+        }
+
+        char buffer[8192];
+        while (file.read(buffer, sizeof(buffer)) || file.gcount()) {
+            if (!EVP_DigestUpdate(md_ctx, buffer, file.gcount())) {
+                throw std::runtime_error("EVP_DigestUpdate failed");
+            }
+        }
+
+        if (!EVP_DigestFinal_ex(md_ctx, md, &md_len)) {
+            throw std::runtime_error("EVP_DigestFinal_ex failed");
+        }
+    } catch (...) {
+        EVP_MD_CTX_free(md_ctx);
+        throw;
+    }
+
+    EVP_MD_CTX_free(md_ctx);
 
     std::ostringstream oss;
-    for (unsigned char byte : hash) {
-        oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+    for (unsigned int i = 0; i < md_len; ++i) {
+        oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(md[i]);
     }
     return oss.str();
 }
-
