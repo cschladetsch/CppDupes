@@ -1,75 +1,58 @@
-# FSF Project
+#!/bin/bash
 
-## Overview
-FSF is a project designed to efficiently handle file comparisons and related functionalities. It supports robust testing using Google Test (GTest) and includes a streamlined build process with CMake.
+BUILD_DIR="build"
+BIN_DIR="$BUILD_DIR/bin"
 
-## Features
-- File comparison tools with human-readable size outputs for paired files.
-- Unit tests powered by Google Test.
-- Modular design for extensibility.
-- Compatibility with C++20.
+# Function to clean the build directory
+total_clean() {
+    rm -rf $BUILD_DIR
+    echo "Build directory cleaned."
+}
 
-## Requirements
-- CMake 3.10 or higher
-- GCC/Clang (or equivalent compiler supporting C++20)
-- Google Test library
-- OpenSSL development library
+# Function to build the project
+build_project() {
+    mkdir -p $BUILD_DIR
+    cd $BUILD_DIR || exit 1
+    cmake -DCMAKE_BUILD_TYPE=Release .. || { echo "CMake configuration failed."; exit 1; }
+    make || { echo "Build process failed."; exit 1; }
+    cd ..
+    echo "Build completed successfully."
+}
 
-## Setup and Build
+# Function to run tests
+run_tests() {
+    if [ -f "$BIN_DIR/fsf_tests" ]; then
+        $BIN_DIR/fsf_tests
+        echo "Tests executed successfully."
+    elif [ -f "$BUILD_DIR/CTestTestfile.cmake" ]; then
+        cd $BUILD_DIR || exit 1
+        ctest --output-on-failure
+        cd ..
+        echo "CTest executed successfully."
+    else
+        echo "Error: No test executable or CTest configuration found."
+        exit 1
+    fi
+}
 
-### Building the Project
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd fsf
-   ```
-2. Create and navigate to the build directory:
-   ```bash
-   mkdir build && cd build
-   ```
-3. Run CMake and build:
-   ```bash
-   cmake ..
-   make
-   ```
-
-The compiled binaries will be available in the `build/bin` directory.
-
-### Using the Build Script
-The project includes a build script `b` with flexible options. You can specify options in any order and combine them as needed:
-- `-c`: Clean the build directory.
-- `-b`: Build the project.
-- `-t`: Run tests.
-
-Examples:
-- `./b -c`: Clean only.
-- `./b -b`: Build only.
-- `./b -cb`: Clean and build.
-- `./b -t`: Run tests.
-- `./b -bct`: Build, clean, and test (order does not matter).
-
-### Running Tests
-To run the tests:
-```bash
-./b -t
-```
-Alternatively, you can execute the test binary directly:
-```bash
-./build/bin/fsf_tests
-```
-
-## Usage
-The `fsf_main` executable provides the core functionality. Pass the required arguments to compare files or execute other tasks as needed.
-
-## Contributing
-1. Fork the repository and create a new branch for your feature or bugfix.
-2. Submit a pull request with a detailed explanation of the changes.
-
-## License
-This project is licensed under the MIT License. See the LICENSE file for details.
-
-## Acknowledgments
-- Google Test for the testing framework.
-- CMake for build automation.
-- OpenSSL for cryptographic functionality.
+# Parse command line arguments
+while getopts "cbt" opt; do
+    case $opt in
+        c)
+            total_clean
+            ;;
+        b)
+            build_project
+            ;;
+        t)
+            total_clean
+            build_project
+            run_tests
+            ;;
+        ?)
+            echo "Usage: $0 [-c] [-b] [-t]"
+            exit 1
+            ;;
+    esac
+done
 
