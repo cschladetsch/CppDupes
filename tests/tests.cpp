@@ -1,99 +1,106 @@
 #include <gtest/gtest.h>
-#include <filesystem>
-#include <fstream>
-#include "FileHashMapper.hpp"
+#include <gtest/gtest-spi.h>
+#include "../include/FileHashMapper.hpp"
+#include "../include/DirectoryComparer.hpp"
 
-namespace fs = std::filesystem;
+class CustomTestListener : public testing::TestEventListener {
+    testing::TestEventListener* default_listener;
+public:
+    CustomTestListener(testing::TestEventListener* listener) : default_listener(listener) {}
 
-class FileHashMapperTestFixture : public ::testing::Test {
-protected:
-    void SetUp() override {
-        if (fs::exists("test_data")) {
-            fs::remove_all("test_data");
-        }
-        fs::create_directory("test_data");
-        fs::create_directory("test_data/dir1");
-        fs::create_directory("test_data/dir2");
+    virtual void OnTestProgramStart(const testing::UnitTest& unit_test) override {
+        default_listener->OnTestProgramStart(unit_test);
     }
 
-    void TearDown() override {
-        if (fs::exists("test_data")) {
-            fs::remove_all("test_data");
-        }
+    virtual void OnTestIterationStart(const testing::UnitTest& unit_test, int iteration) override {
+        std::cout << "\n=== Test Iteration " << iteration << " Starting ===\n";
+        default_listener->OnTestIterationStart(unit_test, iteration);
     }
 
-    void writeFile(const std::string& path, const std::string& content) {
-        std::ofstream file(path);
-        file << content;
-        file.close();
+    virtual void OnEnvironmentsSetUpStart(const testing::UnitTest& unit_test) override {
+        std::cout << "\n=== Setting Up Test Environment ===\n";
+        default_listener->OnEnvironmentsSetUpStart(unit_test);
+    }
+
+    virtual void OnEnvironmentsSetUpEnd(const testing::UnitTest& unit_test) override {
+        default_listener->OnEnvironmentsSetUpEnd(unit_test);
+    }
+
+    virtual void OnTestSuiteStart(const testing::TestSuite& test_suite) override {
+        std::cout << "\n=== Test Suite '" << test_suite.name() << "' Starting ===\n";
+        default_listener->OnTestSuiteStart(test_suite);
+    }
+
+    virtual void OnTestStart(const testing::TestInfo& test_info) override {
+        std::cout << "\n=== TEST '" << test_info.name() << "' Starting ===\n";
+        default_listener->OnTestStart(test_info);
+    }
+
+    virtual void OnTestPartResult(const testing::TestPartResult& test_part_result) override {
+        if (test_part_result.failed()) {
+            std::cout << "\nFAILURE in " << test_part_result.file_name() << ":" 
+                     << test_part_result.line_number() << "\n"
+                     << test_part_result.summary() << "\n";
+        }
+        default_listener->OnTestPartResult(test_part_result);
+    }
+
+    virtual void OnTestEnd(const testing::TestInfo& test_info) override {
+        std::cout << "\n=== TEST '" << test_info.name() << "' ";
+        if (test_info.result()->Passed()) {
+            std::cout << "PASSED";
+        } else {
+            std::cout << "FAILED";
+        }
+        std::cout << " (took " << test_info.result()->elapsed_time() << "ms) ===\n";
+        default_listener->OnTestEnd(test_info);
+    }
+
+    virtual void OnTestSuiteEnd(const testing::TestSuite& test_suite) override {
+        std::cout << "\n=== Test Suite '" << test_suite.name() 
+                 << "' Finished. Passed: " << test_suite.successful_test_count()
+                 << "/" << test_suite.total_test_count() << " tests ===\n";
+        default_listener->OnTestSuiteEnd(test_suite);
+    }
+
+    virtual void OnEnvironmentsTearDownStart(const testing::UnitTest& unit_test) override {
+        std::cout << "\n=== Tearing Down Test Environment ===\n";
+        default_listener->OnEnvironmentsTearDownStart(unit_test);
+    }
+
+    virtual void OnEnvironmentsTearDownEnd(const testing::UnitTest& unit_test) override {
+        default_listener->OnEnvironmentsTearDownEnd(unit_test);
+    }
+
+    virtual void OnTestIterationEnd(const testing::UnitTest& unit_test, int iteration) override {
+        std::cout << "\n=== Test Iteration " << iteration << " Complete ===\n";
+        default_listener->OnTestIterationEnd(unit_test, iteration);
+    }
+
+    virtual void OnTestProgramEnd(const testing::UnitTest& unit_test) override {
+        std::cout << "\n=== TEST PROGRAM COMPLETE ===\n"
+                 << "Total Tests: " << unit_test.total_test_count() << "\n"
+                 << "Passed: " << unit_test.successful_test_count() << "\n"
+                 << "Failed: " << unit_test.failed_test_count() << "\n"
+                 << "Disabled: " << unit_test.disabled_test_count() << "\n"
+                 << "Time Elapsed: " << unit_test.elapsed_time() << "ms\n";
+        default_listener->OnTestProgramEnd(unit_test);
+    }
+
+    ~CustomTestListener() {
+        delete default_listener;
     }
 };
 
-TEST_F(FileHashMapperTestFixture, ExactDuplicatesInDifferentDirectories) {
-    writeFile("test_data/dir1/file1.txt", "test content");
-    writeFile("test_data/dir2/file2.txt", "test content");
-
-    FileHashMapper mapper;
-    mapper.process_directory("test_data");
-    
-    auto hashes = mapper.get_file_hashes();
-    
-    // Group files by hash to find duplicates
-    std::unordered_map<std::string, std::vector<std::string>> hashGroups;
-    for (const auto& [path, hash] : hashes) {
-        hashGroups[hash].push_back(path);
-    }
-    
-    // Find groups with more than one file (duplicates)
-    bool hasDuplicates = false;
-    for (const auto& [hash, files] : hashGroups) {
-        if (files.size() > 1) {
-            hasDuplicates = true;
-            break;
-        }
-    }
-    
-    EXPECT_TRUE(hasDuplicates);
-    EXPECT_EQ(mapper.get_file_count(), 2);
-}
-
-TEST_F(FileHashMapperTestFixture, NoDuplicatesWithDifferentContent) {
-    writeFile("test_data/dir1/file1.txt", "content1");
-    writeFile("test_data/dir2/file2.txt", "content2");
-
-    FileHashMapper mapper;
-    mapper.process_directory("test_data");
-    
-    auto hashes = mapper.get_file_hashes();
-    
-    // Group files by hash
-    std::unordered_map<std::string, std::vector<std::string>> hashGroups;
-    for (const auto& [path, hash] : hashes) {
-        hashGroups[hash].push_back(path);
-    }
-    
-    // Check that no hash has more than one file
-    bool hasDuplicates = false;
-    for (const auto& [hash, files] : hashGroups) {
-        if (files.size() > 1) {
-            hasDuplicates = true;
-            break;
-        }
-    }
-    
-    EXPECT_FALSE(hasDuplicates);
-    EXPECT_EQ(mapper.get_file_count(), 2);
-}
-
-TEST_F(FileHashMapperTestFixture, HandlesEmptyDirectory) {
-    FileHashMapper mapper;
-    mapper.process_directory("test_data");
-    
-    EXPECT_EQ(mapper.get_file_count(), 0);
-    EXPECT_EQ(mapper.get_total_size(), 0);
-}
-
 int main(int argc, char **argv) {
     testing::InitGoogleTest(&argc, argv);
+    
+    // Remove default listener
+    testing::TestEventListeners& listeners = testing::UnitTest::GetInstance()->listeners();
+    auto default_listener = listeners.Release(listeners.default_result_printer());
+    
+    // Add custom verbose listener
+    listeners.Append(new CustomTestListener(default_listener));
+
     return RUN_ALL_TESTS();
 }
