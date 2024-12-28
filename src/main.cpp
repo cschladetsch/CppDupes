@@ -12,14 +12,14 @@ int main(int argc, char* argv[]) {
     std::time_t now = std::time(nullptr);
     char time_str[100];
     std::strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
-	std::cout << "Built on: " << time_str << std::endl;
 
     po::options_description desc("Allowed options");
     desc.add_options()
         ("help,h", "Show help message")
         ("version,v", "Show version information")
         ("mode,m", po::value<std::string>()->default_value("all"), "Comparison mode: all, different, same, unique")
-        ("directories", po::value<std::vector<std::string>>()->multitoken(), "Directories to compare");
+        ("directories", po::value<std::vector<std::string>>()->multitoken(), "Directories to compare")
+        ("exclude,e", po::value<std::vector<std::string>>()->multitoken(), "Folder names to exclude from comparison");
 
     po::variables_map vm;
     try {
@@ -59,12 +59,17 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    std::vector<std::string> exclude_folders;
+    if (vm.count("exclude")) {
+        exclude_folders = vm["exclude"].as<std::vector<std::string>>();
+    }
+
     std::vector<fs::path> directories;
     for (const auto& dir : dir_strings) {
         directories.emplace_back(dir);
     }
 
-    DirectoryComparer::compare_directories(directories, mode);
+    DirectoryComparer::compare_directories(directories, mode, exclude_folders);
 
     return 0;
 }
