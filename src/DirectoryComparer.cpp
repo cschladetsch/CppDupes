@@ -1,78 +1,185 @@
-#include <array>
-#include <iomanip>
-#include <sstream>
+#include "DirectoryComparer.hpp"
+#include <openssl/md5.h>
+#include <fstream>
+#include <algorithm>
 #include <iostream>
-#include "DirectoryComparer.hpp"
 
-#include "DirectoryComparer.hpp"
-#include "FileHashMapper.hpp"
-#include <algorithm>  // For std::any_of
-#include <array>
-#include <iomanip>
-#include <sstream>
+void DirectoryComparer::compare_directories(
+    const std::vector<std::filesystem::path>& directories, 
+    ComparisonMode mode, 
+    const std::vector<std::string>& exclude_folders
+) {
+    // Validate input
+    if (directories.size() < 2) {
+        throw std::runtime_error("At least two directories are required for comparison");
+    }
 
-void DirectoryComparer::process_directory(
-    const fs::path& dir,
-    std::unordered_map<std::string, std::string>& file_hashes,
-    const std::vector<std::string>& exclude_folders) {
-    for (const auto& entry : fs::recursive_directory_iterator(dir)) {
-        // Check if the file or directory matches an excluded folder pattern
-        bool excluded = std::any_of(exclude_folders.begin(), exclude_folders.end(), [&](const std::string& folder) {
-            return entry.path().string().find(folder) != std::string::npos;
+    // Concurrent hash computation
+    std::vector<std::future<std::unordered_map<std::string, std::string>>> futures;
+    for (const auto& dir : directories) {
+        futures.push_back(std::async(std::launch::async, 
+            [&dir, &exclude_folders]() {
+                return process_directory(dir, exclude_folders);
+            }
+        ));
+    }
+
+    // Collect results
+    std::vector<std::unordered_map<std::string, std::string>> directory_hashes;
+    for (auto& future : futures) {
+        directory_hashes.push_back(future.get());
+    }
+
+    // Compare hashes
+    compare_hashes(directory_hashes, mode);
+}
+
+std::unordered_map<std::string, std::string> DirectoryComparer::process_directory(
+    const std::filesystem::path& dir, 
+    const std::vector<std::string>& exclude_folders
+) {
+    std::unordered_map<std::string, std::string> file_hashes;
+    std::mutex hash_mutex;
+
+    // Use parallel processing for directory iteration
+    std::vector<std::thread> threads;
+    std::atomic<size_t> file_count{0};
+
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(
+        dir, 
+        std::filesystem::directory_options::skip_permission_denied
+    )) {
+        // Skip excluded and non-regular files
+        if (!entry.is_regular_file() || is_excluded(entry.path(), exclude_folders)) {
+            continue;
+        }
+
+        // Process files in parallel
+        threads.emplace_back([&, path = entry.path()]() {
+            std::string hash = compute_file_hash(path);
+            
+            // Thread-safe insertion
+            std::lock_guard<std::mutex> lock(hash_mutex);
+            file_hashes[std::filesystem::relative(path, dir).string()] = hash;
         });
 
-        if (!excluded && entry.is_regular_file()) {
-            std::string relative_path = fs::relative(entry.path(), dir).string();
-            file_hashes[relative_path] = FileHashMapper::compute_md5(entry.path());
+        // Limit concurrent threads
+        if (threads.size() >= std::thread::hardware_concurrency()) {
+            for (auto& t : threads) {
+                t.join();
+            }
+            threads.clear();
+        }
+    }
+
+    // Join any remaining threads
+    for (auto& t : threads) {
+        t.join();
+    }
+
+    return file_hashes;
+}
+
+bool DirectoryComparer::is_excluded(
+    const std::filesystem::path& path, 
+    const std::vector<std::string>& exclude_folders
+) {
+    for (const auto& component : path) {
+        if (std::find(exclude_folders.begin(), exclude_folders.end(), component.string()) 
+            != exclude_folders.end()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string DirectoryComparer::compute_file_hash(const std::filesystem::path& filepath) {
+    constexpr size_t BUFFER_SIZE = 64 * 1024;  // 64KB buffer
+    std::vector<char> buffer(BUFFER_SIZE);
+
+    // Open file efficiently
+    std::ifstream file(filepath, std::ios::binary);
+    if (!file) {
+        return {};
+    }
+
+    // MD5 computation
+    MD5_CTX md5Context;
+    MD5_Init(&md5Context);
+
+    // Efficient file reading
+    while (file.read(buffer.data(), BUFFER_SIZE)) {
+        MD5_Update(&md5Context, buffer.data(), file.gcount());
+    }
+
+    // Handle remaining bytes
+    if (file.gcount() > 0) {
+        MD5_Update(&md5Context, buffer.data(), file.gcount());
+    }
+
+    // Finalize hash
+    unsigned char hash[MD5_DIGEST_LENGTH];
+    MD5_Final(hash, &md5Context);
+
+    // Fast hex conversion
+    char hex_hash[MD5_DIGEST_LENGTH * 2 + 1];
+    for (int i = 0; i < MD5_DIGEST_LENGTH; ++i) {
+        snprintf(hex_hash + i * 2, 3, "%02x", hash[i]);
+    }
+    hex_hash[MD5_DIGEST_LENGTH * 2] = '\0';
+
+    return hex_hash;
+}
+
+void DirectoryComparer::compare_hashes(
+    const std::vector<std::unordered_map<std::string, std::string>>& directory_hashes,
+    ComparisonMode mode
+) {
+    // Early exit if insufficient data
+    if (directory_hashes.size() < 2) {
+        return;
+    }
+
+    // Use unordered_map for fast lookups
+    std::unordered_map<std::string, std::vector<std::pair<size_t, std::string>>> hash_index;
+
+    // Build index of hashes
+    for (size_t dir_idx = 0; dir_idx < directory_hashes.size(); ++dir_idx) {
+        for (const auto& [filename, hash] : directory_hashes[dir_idx]) {
+            hash_index[hash].emplace_back(dir_idx, filename);
+        }
+    }
+
+    // Identify and process duplicate files
+    for (const auto& [hash, file_list] : hash_index) {
+        // Only care about hashes appearing in multiple directories
+        if (file_list.size() > 1) {
+            handle_duplicate_files(file_list, directory_hashes, mode);
         }
     }
 }
 
-void DirectoryComparer::compare_directories(const std::vector<fs::path>& directories, ComparisonMode mode, const std::vector<std::string>& exclude_folders) {
-    std::unordered_map<std::string, std::unordered_map<std::string, std::string>> all_hashes;
-
-    for (const auto& dir : directories) {
-        std::unordered_map<std::string, std::string> file_hashes;
-        process_directory(dir, file_hashes, exclude_folders);
-        all_hashes[dir.string()] = file_hashes;
-    }
-
-    print_comparison(all_hashes, mode);
-}
-
-std::string DirectoryComparer::format_size(std::uintmax_t size) {
-    constexpr std::array<const char*, 5> suffixes = {"B", "KB", "MB", "GB", "TB"};
-    double readable_size = static_cast<double>(size);
-    int suffix_index = 0;
-
-    while (readable_size >= 1024 && suffix_index < suffixes.size() - 1) {
-        readable_size /= 1024;
-        ++suffix_index;
-    }
-
-    std::ostringstream oss;
-    oss << std::fixed << std::setprecision(2) << readable_size << " " << suffixes[suffix_index];
-    return oss.str();
-}
-
-void DirectoryComparer::print_comparison(
-    const std::unordered_map<std::string, std::unordered_map<std::string, std::string>>& all_hashes,
-    ComparisonMode mode) {
-    for (const auto& [dir1, hashes1] : all_hashes) {
-        for (const auto& [dir2, hashes2] : all_hashes) {
-            if (dir1 >= dir2) continue;
-
-            for (const auto& [file1, hash1] : hashes1) {
-                auto it = hashes2.find(file1);
-                if (it != hashes2.end() && hash1 == it->second) {
-                    std::uintmax_t file_size = fs::file_size(file1);
-                    std::string human_readable_size = DirectoryComparer::format_size(file_size);
-                    std::cout << "Duplicate: Size: " << human_readable_size << "\n";
-                    std::cout << file1 << "\n";
-                    std::cout << it->first << "\n";
+void DirectoryComparer::handle_duplicate_files(
+    const std::vector<std::pair<size_t, std::string>>& file_list,
+    const std::vector<std::unordered_map<std::string, std::string>>& directory_hashes,
+    ComparisonMode mode
+) {
+    // Basic implementation of duplicate file handling
+    switch (mode) {
+        case ComparisonMode::All:
+        case ComparisonMode::OnlySame: {
+            // Print files that are the same
+            for (size_t i = 0; i < file_list.size(); ++i) {
+                for (size_t j = i + 1; j < file_list.size(); ++j) {
+                    std::cout << "Duplicate: " 
+                              << file_list[i].second << " and " 
+                              << file_list[j].second << '\n';
                 }
             }
+            break;
         }
+        // Add other mode implementations as needed
+        default:
+            break;
     }
 }
-

@@ -1,127 +1,113 @@
-# FSF Project
+# File System Comparator (FSF)
 
 ## Overview
-FSF is a project designed to handle file comparisons using MD5 hashes, while providing modular and testable architecture. The project is written in modern C++20, leveraging OpenSSL for cryptographic operations, Boost for command-line argument parsing, and Google Test for unit testing.
+
+FSF is a high-performance C++20 command-line tool designed to compare files across multiple directories. It provides flexible file comparison modes, performance measurement, and detailed reporting.
 
 ## Features
-- Compute and compare MD5 hashes for files in directories.
-- Supports comparing any number of directories specified on the command line.
-- Options to display only different files, same files, or files unique to one directory.
-- Modular architecture with `src` and `tests` directories for clear separation of concerns.
-- Boost program-options for arguments.
-- Google Test integration for robust testing.
-- C++20 support for modern features and better performance.
 
-## Directory Structure
-```
-fsf/
-├── CMakeLists.txt          # Root CMake configuration
-├── src/                   # Source files for the main application
-│   ├── CMakeLists.txt      # CMake configuration for src
-│   ├── main.cpp            # Entry point for the application
-│   └── FileHashMapper.cpp  # Core logic for hashing and file processing
-├── tests/                 # Unit tests for the application
-│   ├── CMakeLists.txt      # CMake configuration for tests
-│   └── tests.cpp           # Test cases using Google Test
-└── include/               # Shared headers
-    └── FileHashMapper.hpp  # Declaration of FileHashMapper
-```
+- Multiple comparison modes
+  - `all`: Compare all files
+  - `different`: Show only different files
+  - `same`: Show only identical files
+  - `unique`: Show unique files
 
-## Requirements
-- **CMake**: Version 3.10 or higher
-- **C++ Compiler**: GCC, Clang, or MSVC supporting C++20
-- **Dependencies**:
-  - Google Test (GTest)
-  - OpenSSL
-  - Boost Program Options
+- Performance measurement
+- Concurrent file processing
+- MD5-based file comparison
+- Automatic time logging
+- Supports multiple directories
 
-## Setup and Build
-### Cloning the Repository
+## Prerequisites
+
+- C++20 compatible compiler (GCC 10+)
+- CMake 3.10+
+- OpenSSL development libraries
+
+## Installation
+
+### Dependencies
+
+On Ubuntu/Debian:
 ```bash
+sudo apt-get update
+sudo apt-get install build-essential cmake libssl-dev
+```
+
+On macOS (using Homebrew):
+```bash
+brew install cmake openssl
+```
+
+### Building
+
+```bash
+# Clone the repository
 git clone <repository-url>
 cd fsf
+
+# Build the project (optional)
+mkdir build
+cd build
+cmake ..
+make
 ```
 
-### Building and Running the Project
-Use the provided `b` script to manage builds. The following options are available and can be combined:
+## Usage
 
-- `-c`: Clean the build directory.
-- `-b`: Build the project.
-- `-t`: Run tests without rebuilding.
+### Basic Usage
 
-#### Examples
-- **Clean and build**:
-  ```bash
-  ./b -cb
-  ```
-- **Clean, build, and run tests**:
-  ```bash
-  ./b -cbt
-  ```
-- **Build and run tests**:
-  ```bash
-  ./b -bt
-  ```
-
-The compiled binary (`fsf`) will be located in `~/bin`. Esnure this is added to your PATH.
-
-### Main Application Help Output
-Run the application with `--help` to see available options:
 ```bash
-~/bin/fsf --help
+# Compare files in two directories
+./fsf same dir1 dir2
+
+# Compare files in multiple directories
+./fsf all dir1 dir2 dir3
+
+# Show help
+./fsf --help
 ```
 
-#### Example Output
-```
-Allowed options:
-  -h [ --help ]          Show help message
-  -m [ --mode ] arg      Comparison mode: all, different, same, unique
-  --directories arg      Directories to compare
-```
+### Performance Measurement
 
-#### Usage Examples:
-- Compare all files in two directories:
-  ```bash
-  ~/bin/fsf --directories /path/to/dir1 /path/to/dir2
-  ```
-- Show only files that differ:
-  ```bash
-  ~/bin/fsf --mode different --directories /path/to/dir1 /path/to/dir2
-  ```
-- Show unique files across three directories:
-  ```bash
-  ~/bin/fsf --mode unique --directories /path/to/dir1 /path/to/dir2 /path/to/dir3
-  ```
-
-### Boost Dependency
-Ensure Boost libraries are installed:
 ```bash
-sudo apt-get install libboost-program-options-dev
+# Run comparison 10 times
+./fsf same -r 10 dir1 dir2
 ```
 
-### Running Tests
-To build and run tests using the `b` script:
-```bash
-./b -cbt
-```
-This cleans, builds, and runs the test suite, providing detailed output in case of failures.
+### Modes
 
-To run tests without rebuilding:
-```bash
-./b -t
-```
-This runs the test suite only.
+- `all`: Show all file comparisons
+- `different`: Show only files that differ
+- `same`: Show only identical files
+- `unique`: Show files unique to specific directories
+
+## Output
+
+The tool generates detailed output about file similarities and can log performance metrics to `time-times.txt`.
+
+## Performance Logging
+
+Each run can be logged with:
+- Timestamp
+- Number of repetitions
+- Mean execution time
+- Standard deviation
+- Comparison mode
+- Directories compared
 
 ## Contributing
-1. Fork the repository and create a new branch for your feature or bugfix.
-2. Submit a pull request with a detailed explanation of the changes.
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
 ## License
-This project is licensed under the MIT License. See the LICENSE file for more details.
 
-## Acknowledgments
-- **Google Test**: For providing the testing framework.
-- **OpenSSL**: For cryptographic operations.
-- **Boost**: For program options parsing.
-- **CMake**: For build system management.
+MIT.
 
+## Contact
+
+christian.schladetsch@gmail.com

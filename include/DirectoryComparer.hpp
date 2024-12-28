@@ -1,9 +1,12 @@
 #pragma once
 
 #include <filesystem>
-#include <string>
 #include <unordered_map>
 #include <vector>
+#include <string>
+#include <thread>
+#include <mutex>
+#include <future>
 
 enum class ComparisonMode {
     All,
@@ -14,7 +17,6 @@ enum class ComparisonMode {
 
 class DirectoryComparer {
 public:
-    // Remove the namespace declaration inside the class
     static void compare_directories(
         const std::vector<std::filesystem::path>& directories, 
         ComparisonMode mode, 
@@ -22,16 +24,26 @@ public:
     );
 
 private:
-    static void process_directory(
+    static std::unordered_map<std::string, std::string> process_directory(
         const std::filesystem::path& dir, 
-        std::unordered_map<std::string, std::string>& file_hashes, 
         const std::vector<std::string>& exclude_folders
     );
 
-    static void print_comparison(
-        const std::unordered_map<std::string, std::unordered_map<std::string, std::string>>& all_hashes,
+    static bool is_excluded(
+        const std::filesystem::path& path, 
+        const std::vector<std::string>& exclude_folders
+    );
+
+    static std::string compute_file_hash(const std::filesystem::path& filepath);
+
+    static void compare_hashes(
+        const std::vector<std::unordered_map<std::string, std::string>>& directory_hashes,
         ComparisonMode mode
     );
 
-    static std::string format_size(std::uintmax_t size);
+    static void handle_duplicate_files(
+        const std::vector<std::pair<size_t, std::string>>& file_list,
+        const std::vector<std::unordered_map<std::string, std::string>>& directory_hashes,
+        ComparisonMode mode
+    );
 };

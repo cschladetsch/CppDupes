@@ -1,14 +1,22 @@
 #!/bin/bash
 
-# Check if the build script exists
-if [ ! -f "./b" ]; then
-    echo "Error: Build script './b' not found."
-    exit 1
+# Potential executable locations
+EXECUTABLE="$HOME/bin/fsf"
+
+# Check if executable exists
+if [ ! -x "$EXECUTABLE" ]; then
+    echo "Executable not found. Building project..."
+    
+    # Build steps
+    mkdir -p build
+    cd build
+    cmake ..
+    make
+    
+    # Install to ~/bin if it doesn't exist
+    mkdir -p "$HOME/bin"
+    cp bin/fsf "$HOME/bin/"
 fi
 
-# Ensure the build script is executable
-chmod +x ./b
-
-# Execute the build script with the desired options
-./b -cbt
-
+# Run the executable with all provided arguments
+"$EXECUTABLE" "$@"
