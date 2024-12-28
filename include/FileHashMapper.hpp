@@ -1,5 +1,4 @@
-#ifndef FILE_HASH_MAPPER_HPP
-#define FILE_HASH_MAPPER_HPP
+#pragma once
 
 #include <string>
 #include <filesystem>
@@ -21,6 +20,4 @@ private:
     std::atomic<uintmax_t> total_size;
 
 };
-
-#endif // FILE_HASH_MAPPER_HPP
 
