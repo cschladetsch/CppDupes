@@ -10,10 +10,13 @@ FileHashMapper::FileHashMapper() : file_count(0), total_size(0) {}
 #include "FileHashMapper.hpp"
 #include <iostream>
 
+#include "FileHashMapper.hpp"
+#include <iostream>
+
 void FileHashMapper::process_directory(const fs::path& dir) {
     for (const auto& entry : fs::recursive_directory_iterator(dir)) {
         if (entry.is_regular_file()) {
-            // Store relative paths for comparison consistency
+            // Store relative paths for consistent comparison
             std::string relative_path = fs::relative(entry.path(), dir).string();
             file_hashes[relative_path] = compute_md5(entry.path());
             std::cout << "Processing file: " << entry.path() << " [Stored as: " << relative_path << "]\n";
