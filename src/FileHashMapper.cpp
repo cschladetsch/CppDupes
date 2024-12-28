@@ -2,16 +2,13 @@
 #include <openssl/md5.h>
 #include <fstream>
 #include <sstream>
-#include <iostream>
 #include <iomanip>
+#include <iostream>
+#include <algorithm>
+
+#include "FileHashMapper.hpp"
 
 FileHashMapper::FileHashMapper() : file_count(0), total_size(0) {}
-
-#include "FileHashMapper.hpp"
-#include <iostream>
-
-#include "FileHashMapper.hpp"
-#include <iostream>
 
 void FileHashMapper::process_directory(const fs::path& dir) {
     for (const auto& entry : fs::recursive_directory_iterator(dir)) {
