@@ -1,91 +1,74 @@
-# File Similarity Finder (FSF)
+# FSF Project
 
 ## Overview
-
-FSF is a high-performance C++20 command-line tool designed to find duplicate files across two directories by computing MD5 hashes. It efficiently identifies files with identical content, ignoring `.git` directories.
+FSF is a project designed to efficiently handle file comparisons and related functionalities. It supports robust testing using Google Test (GTest) and includes a streamlined build process with CMake.
 
 ## Features
+- File comparison tools with human-readable size outputs for paired files.
+- Unit tests powered by Google Test.
+- Modular design for extensibility.
+- Compatibility with C++20.
 
-- Parallel file processing
-- MD5 hash-based file comparison
-- Skips `.git` directories
-- Supports recursive directory scanning
-- Low memory footprint
-- Fast execution
+## Requirements
+- CMake 3.10 or higher
+- GCC/Clang (or equivalent compiler supporting C++20)
+- Google Test library
+- OpenSSL development library
 
-## Prerequisites
+## Setup and Build
 
-- C++20 compatible compiler (GCC 10+, Clang 10+)
-- OpenSSL development libraries
-- CMake 3.10+
+### Building the Project
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd fsf
+   ```
+2. Create and navigate to the build directory:
+   ```bash
+   mkdir build && cd build
+   ```
+3. Run CMake and build:
+   ```bash
+   cmake ..
+   make
+   ```
 
-## Installation
+The compiled binaries will be available in the `build/bin` directory.
 
-### Dependencies
+### Using the Build Script
+The project includes a build script `b` with flexible options. You can specify options in any order and combine them as needed:
+- `-c`: Clean the build directory.
+- `-b`: Build the project.
+- `-t`: Run tests.
 
-On Ubuntu/Debian:
+Examples:
+- `./b -c`: Clean only.
+- `./b -b`: Build only.
+- `./b -cb`: Clean and build.
+- `./b -t`: Run tests.
+- `./b -bct`: Build, clean, and test (order does not matter).
+
+### Running Tests
+To run the tests:
 ```bash
-sudo apt-get update
-sudo apt-get install build-essential cmake libssl-dev
+./b -t
 ```
-
-On macOS (using Homebrew):
+Alternatively, you can execute the test binary directly:
 ```bash
-brew install cmake openssl
-```
-
-### Building
-
-```bash
-# Clone the repository
-git clone <repository-url>
-cd fsf
-
-# Build the project
-./b
+./build/bin/fsf_tests
 ```
 
 ## Usage
-
-```bash
-$ fsf dir1 dir2
-```
-
-Shows all files that have different names/locations but same content. Warning: can take some time if you use entire drives.
-
-### Output
-
-The program outputs full paths of files with identical MD5 hashes across the specified directories.
-
-## Build Script Options
-
-```bash
-$./b -c    # Clean build
-$./b -t    # Build and test
-$./b -v    # Verbose test output
-$./b -ct   # Clean, build, and test
-$./b -a    # All: Clean, build, and test with verbose output
-```
-
-## Performance
-
-- Utilizes C++20 features
-- Concurrent directory processing
-- Optimized file reading
-- Minimal memory allocation
+The `fsf_main` executable provides the core functionality. Pass the required arguments to compare files or execute other tasks as needed.
 
 ## Contributing
-
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+1. Fork the repository and create a new branch for your feature or bugfix.
+2. Submit a pull request with a detailed explanation of the changes.
 
 ## License
+This project is licensed under the MIT License. See the LICENSE file for details.
 
-MIT
-
-## Contact
-
-chrisian.schladetsch@gmail.com
+## Acknowledgments
+- Google Test for the testing framework.
+- CMake for build automation.
+- OpenSSL for cryptographic functionality.
