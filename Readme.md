@@ -1,10 +1,12 @@
 # FSF Project
 
 ## Overview
-FSF is a project designed to handle file comparisons using MD5 hashes, while providing modular and testable architecture. The project is written in modern C++20, leveraging OpenSSL for cryptographic operations and Google Test for unit testing.
+FSF is a project designed to handle file comparisons using MD5 hashes, while providing modular and testable architecture. The project is written in modern C++20, leveraging OpenSSL for cryptographic operations, Boost for command-line argument parsing, and Google Test for unit testing.
 
 ## Features
 - Compute and compare MD5 hashes for files in directories.
+- Supports comparing any number of directories specified on the command line.
+- Options to display only different files, same files, or files unique to one directory.
 - Modular architecture with `src` and `tests` directories for clear separation of concerns.
 - Google Test integration for robust testing.
 - C++20 support for modern features and better performance.
@@ -30,6 +32,7 @@ fsf/
 - **Dependencies**:
   - Google Test (GTest)
   - OpenSSL
+  - Boost Program Options
 
 ## Setup and Build
 ### Cloning the Repository
@@ -38,29 +41,18 @@ git clone <repository-url>
 cd fsf
 ```
 
-### Building the Project
-Use the provided `b` script for managing builds. The options for `b` can be combined in any order:
+### Building and Running the Project
+Use the provided `b` script to manage builds. The following options are available and can be combined:
 
-- **Clean the build directory**:
-  ```bash
-  ./b -c
-  ```
-- **Build the project**:
-  ```bash
-  ./b -b
-  ```
+- `-c`: Clean the build directory.
+- `-b`: Build the project.
+- `-t`: Run tests without rebuilding.
+
+#### Examples
 - **Clean and build**:
   ```bash
   ./b -cb
   ```
-- **Run tests without rebuilding**:
-  ```bash
-  ./b -t
-  ```
-
-### Examples of Combined Options
-You can combine the options of `b` in any order to perform multiple tasks in one command:
-
 - **Clean, build, and run tests**:
   ```bash
   ./b -cbt
@@ -69,21 +61,45 @@ You can combine the options of `b` in any order to perform multiple tasks in one
   ```bash
   ./b -bt
   ```
-- **Clean only**:
+
+The compiled binary (`fsf`) will be located in `~/bin`. Ensure the `~/bin` folder exists:
+```bash
+mkdir -p ~/bin
+```
+
+### Main Application Help Output
+Run the application with `--help` to see available options:
+```bash
+~/bin/fsf --help
+```
+
+#### Example Output
+```
+Allowed options:
+  -h [ --help ]          Show help message
+  -m [ --mode ] arg      Comparison mode: all, different, same, unique
+  --directories arg      Directories to compare
+```
+
+#### Usage Examples:
+- Compare all files in two directories:
   ```bash
-  ./b -c
+  ~/bin/fsf --directories /path/to/dir1 /path/to/dir2
   ```
-- **Run tests only**:
+- Show only files that differ:
   ```bash
-  ./b -t
+  ~/bin/fsf --mode different --directories /path/to/dir1 /path/to/dir2
+  ```
+- Show unique files across three directories:
+  ```bash
+  ~/bin/fsf --mode unique --directories /path/to/dir1 /path/to/dir2 /path/to/dir3
   ```
 
-### Running the Main Application
-The compiled binary for the main application (`fsf_main`) will be located in `~/bin`. To execute:
+### Boost Dependency
+Ensure Boost libraries are installed:
 ```bash
-~/bin/fsf_main <directory1> <directory2>
+sudo apt-get install libboost-program-options-dev
 ```
-This compares the files in `directory1` and `directory2` based on their MD5 hashes.
 
 ### Running Tests
 To build and run tests using the `b` script:
@@ -108,6 +124,6 @@ This project is licensed under the MIT License. See the LICENSE file for more de
 ## Acknowledgments
 - **Google Test**: For providing the testing framework.
 - **OpenSSL**: For cryptographic operations.
+- **Boost**: For program options parsing.
 - **CMake**: For build system management.
-
 

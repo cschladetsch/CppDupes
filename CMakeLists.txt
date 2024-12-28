@@ -10,13 +10,20 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Enable testing
 enable_testing()
 
-# Add common dependencies
-find_package(GTest REQUIRED)
-include_directories(${GTEST_INCLUDE_DIRS})
+# Find dependencies
+find_package(Boost REQUIRED COMPONENTS program_options)
 find_package(OpenSSL REQUIRED)
-include_directories(${CMAKE_SOURCE_DIR}/include)
+find_package(GTest REQUIRED)
 
-# Include subdirectories
+# Include directories
+include_directories(${Boost_INCLUDE_DIRS})
+include_directories(${CMAKE_SOURCE_DIR}/include)
+include_directories(${GTEST_INCLUDE_DIRS})
+
+# Add subdirectories
 add_subdirectory(src)
 add_subdirectory(tests)
+
+# Link Boost libraries globally
+link_directories(${Boost_LIBRARY_DIRS})
 
