@@ -1,5 +1,5 @@
 #include "DirectoryComparer.hpp"
-#include <openssl/md5.h>
+#include <openssl/evp.h>
 #include <fstream>
 #include <algorithm>
 #include <iostream>
@@ -103,32 +103,44 @@ std::string DirectoryComparer::compute_file_hash(const std::filesystem::path& fi
         return {};
     }
 
-    // MD5 computation
-    MD5_CTX md5Context;
-    MD5_Init(&md5Context);
-
-    // Efficient file reading
-    while (file.read(buffer.data(), BUFFER_SIZE)) {
-        MD5_Update(&md5Context, buffer.data(), file.gcount());
+    // Use EVP API for MD5
+    EVP_MD_CTX* md5_context = EVP_MD_CTX_new();
+    if (!md5_context) {
+        throw std::runtime_error("Failed to create EVP_MD_CTX");
     }
 
-    // Handle remaining bytes
-    if (file.gcount() > 0) {
-        MD5_Update(&md5Context, buffer.data(), file.gcount());
+    unsigned char md_value[EVP_MAX_MD_SIZE];
+    unsigned int md_len = 0;
+
+    try {
+        if (!EVP_DigestInit_ex(md5_context, EVP_md5(), nullptr)) {
+            throw std::runtime_error("EVP_DigestInit_ex failed");
+        }
+
+        while (file.read(buffer.data(), BUFFER_SIZE) || file.gcount() > 0) {
+            if (!EVP_DigestUpdate(md5_context, buffer.data(), file.gcount())) {
+                throw std::runtime_error("EVP_DigestUpdate failed");
+            }
+        }
+
+        if (!EVP_DigestFinal_ex(md5_context, md_value, &md_len)) {
+            throw std::runtime_error("EVP_DigestFinal_ex failed");
+        }
+
+    } catch (...) {
+        EVP_MD_CTX_free(md5_context);
+        throw;
     }
 
-    // Finalize hash
-    unsigned char hash[MD5_DIGEST_LENGTH];
-    MD5_Final(hash, &md5Context);
+    EVP_MD_CTX_free(md5_context);
 
-    // Fast hex conversion
-    char hex_hash[MD5_DIGEST_LENGTH * 2 + 1];
-    for (int i = 0; i < MD5_DIGEST_LENGTH; ++i) {
-        snprintf(hex_hash + i * 2, 3, "%02x", hash[i]);
+    // Convert MD5 to a hex string
+    std::ostringstream oss;
+    for (unsigned int i = 0; i < md_len; ++i) {
+        oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(md_value[i]);
     }
-    hex_hash[MD5_DIGEST_LENGTH * 2] = '\0';
 
-    return hex_hash;
+    return oss.str();
 }
 
 void DirectoryComparer::compare_hashes(
