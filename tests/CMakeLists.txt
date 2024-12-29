@@ -2,6 +2,7 @@
 add_executable(fsf_tests
     FileHashMapperTests.cpp
     DirectoryComparatorTests.cpp
+	CustomTestListener.cpp
     tests.cpp
 )
 
